@@ -1,0 +1,135 @@
+4/15
+i installed mysql and mysql connector to pycharm.
+
+using command 'pip install mysql-connector-python'
+
+-mycursor.execute("CREATE DATABASE database")
+
+
+used various programs like notepad ++ to clean up actor data so that each actor within the netflix data set that looked like
+
+john, christian bale, heath ledger
+
+to->
+
+john
+christian bale
+heath ledger
+and removed the duplicates
+
+so now we can have an actors table with id's
+
+but the casts need to be together in a meaningful way so we still need the old cast strings
+so
+to associate a show id with individual actors and not a string list of actors wrote this python script
+to take the first piece of the string which i made it showid then to append that to the rest of the string
+which is the names of actors seperated by a comma then create a new file with that so that i dont use multivalued attributes
+
+f = open("precastnoquo.csv", encoding='utf-8', errors='ignore')
+i=0
+line = f.readlines()
+for y in line:
+    #print(y)
+    names = y.split(',')
+    castid = names[0]
+    for x in names:
+        #this is so the castid doesnt append itself to itself
+        if names.index(x) != 0:
+            newstr = x.strip()
+            newstr = castid +','+ newstr
+            #print(newstr)
+            #write the updated strings to a new file
+            g = open("castupdated.csv", "a", encoding='utf-8', errors='ignore')
+            #add a new line character for mysql
+            g.write(newstr+'\n')
+            g.close
+
+for example it turns 
+S1 is showid and names are cast of actors
+
+S1,john,ryan,dan,james
+into
+S1,john
+S1,ryan
+S1,dan
+S1,james
+
+then i wrote another sript to replace those names with thier corresponding actor id's for the sake of identification
+so 
+
+
+f = open("castupdatedWshowid.csv", encoding='utf-8', errors='ignore')
+#contains the actors and their corresponding id's
+g = open("actorsnf.csv", encoding='utf-8', errors='ignore')
+i=0
+line = f.readlines()
+line2 = g.readlines()
+for y in line:
+    actorline = y.split(',')
+    #the name of the actor
+    showid = actorline[0]
+    name = actorline[1]
+    for x in line2:
+        idline = x.split(',')
+        nameid = idline[0]
+        #if the name from the cast table matches a name on the actor table it replaces the name in the cast table with its id
+        if name == idline[1]:
+            newstr = showid + ',' + nameid
+            print(newstr)
+            h = open("castTable.csv", "a", encoding='utf-8', errors='ignore')
+            h.write(newstr)
+            h.close
+
+also this code performs very poorly as its n*m run time but i wasnt concerned with performance as this wasnt to be done with tha data
+thats to be inserted just data i was given.
+
+turns
+showid	actor
+1,	john
+1,	ryan
+1,	dan
+1,	james
+
+into
+show_id,actor_id
+1,	a15647
+1,	a15623
+1,	a06060
+1,	a00002
+and stored that into a cast table file named 'castTable.csv'
+
+reused the script that applied the id to names from above on the directors table
+to be inserted into the show table does the same thing it did to actors with directors.
+needed this chunk of code to be added to work though
+    #this checks if it was found if not make a blank show id
+    if found == 0:
+        newstr = showid + ',' + '\n'
+        print(newstr)
+        h = open("directorsColumn.csv", "a", encoding='utf-8', errors='ignore')
+        h.write(newstr)
+        h.close()
+
+
+
+connected the id's to the shows table as a foriegn key to directors table
+was now able to implement all the tables into mysql
+
+SET GLOBAL FOREIGN_KEY_CHECKS=0;
+
+
+studio table had to be created from scratch so i took 10 common studios crossed referenced them with data in my table and manually found
+about 150 movies that correlate to a studio
+made a studio id column and a studio table to reference the id.
+
+
+three required natural joins: To access director, actor, and studio data:
+mycursor.execute("SELECT * FROM Shows NATURAL JOIN directors WHERE name LIKE (%s) ", (directorName,))
+mycursor.execute("SELECT * FROM Shows NATURAL JOIN studios WHERE name LIKE (%s) ", (studioName,))
+mycursor.execute("SELECT * FROM Shows NATURAL JOIN Casts NATURAL JOIN actors WHERE name LIKE (%s) ", (actorName,))
+
+in total 7 queries involving natural joins
+
+(actor requires a double natural join because of the Casts table between them linking the two)
+
+
+originally thought to do joining of 4 tables for actor + director but easier to do computation on two queries
